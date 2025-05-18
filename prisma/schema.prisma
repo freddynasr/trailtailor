@@ -1,0 +1,372 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  AGENCY_OWNER
+  AGENCY_ADMIN
+  PROJECT_USER
+  PROJECT_GUEST
+}
+
+enum Icon {
+  settings
+  chart
+  calendar
+  check
+  chip
+  compass
+  database
+  flag
+  home
+  info
+  link
+  lock
+  messages
+  notification
+  payment
+  power
+  receipt
+  shield
+  star
+  tune
+  videorecorder
+  wallet
+  warning
+  headphone
+  send
+  workflow
+  person
+  category
+  contact
+  clipboardIcon
+}
+
+model User {
+  id           String         @id @default(uuid())
+  name         String
+  avatarUrl    String         
+  email        String         @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  role         Role           @default(PROJECT_USER)
+  agencyId     String?
+  Agency       Agency?        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  Permissions  Permissions[]
+  Task       Task[]
+  Notification Notification[]
+
+  @@index([agencyId])
+}
+
+model Permissions {
+  id           String     @id @default(uuid())
+  email        String
+  User         User       @relation(fields: [email], references: [email], onDelete: Cascade)
+  projectId String
+  Project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  access       Boolean
+
+  @@index([projectId])
+  @@index([email])
+}
+
+model Agency {
+  id               String                @id @default(uuid())
+  connectAccountId String?               @default("")
+  customerId       String                @default("")
+  name             String
+  agencyLogo       String                
+  agencyEmail     String                
+  agencyPhone     String
+  whiteLabel       Boolean               @default(true)
+  address          String
+  city             String
+  zipCode          String
+  state            String
+  country          String
+  goal             Int                   @default(5)
+  users            User[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  Project       Project[]
+  SidebarOption    AgencySidebarOption[]
+  Invitation       Invitation[]
+  Notification     Notification[]
+  Subscription     Subscription?
+  planPeriodEnd    DateTime?
+  cancelledAt      DateTime?
+  AddOns           AddOns[]
+}
+
+model Project {
+  id               String                    @id @default(uuid())
+  connectAccountId String?                   @default("")
+  name             String
+  projectLogo   String                    
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  agencyEmail     String                    
+  agencyPhone     String
+  goal             Int                       @default(5)
+  address          String
+  city             String
+  zipCode          String
+  state            String
+  country          String
+  agencyId         String
+  Agency           Agency                    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  SidebarOption    ProjectSidebarOption[]
+  Permissions      Permissions[]
+  Websites          Website[]
+  Media            Media[]
+  Contact          Contact[]
+  Workflow         Workflow[]
+  Tags             Tag[]
+  Notification     Notification[]
+
+  @@index([agencyId])
+}
+
+model Tag {
+  id           String   @id @default(uuid())
+  name         String
+  color        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  projectId String
+
+  Project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Task     Task[]
+
+  @@index([projectId])
+}
+
+model Workflow {
+  id           String     @id @default(uuid())
+  name         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  Lane         Lane[]
+  Project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@index([projectId])
+}
+
+model Lane {
+  id         String   @id @default(uuid())
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  Workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId String
+  Tasks    Task[]
+  order      Int      @default(0)
+
+  @@index([workflowId])
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  laneId      String
+  order       Int      @default(0)
+  Lane        Lane     @relation(fields: [laneId], references: [id], onDelete: Cascade)
+  value       Decimal?
+  description String?
+  Tags        Tag[]
+
+  customerId String?
+  Customer   Contact? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  assignedUserId String?
+  Assigned       User?   @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([laneId])
+  @@index([customerId])
+  @@index([assignedUserId])
+}
+
+model Contact {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  message      String 
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  projectId String
+
+  Project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Task     Task[]
+
+  @@index([projectId])
+}
+
+model Media {
+  id           String     @id @default(uuid())
+  type         String?
+  name         String
+  link         String     @unique
+  projectId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  Project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Website {
+  id            String       @id @default(uuid())
+  name          String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  description   String?
+  published     Boolean      @default(false)
+  subDomainName String?      @unique
+  favicon       String?      
+  projectId  String
+  Project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  WebsitePages   WebsitePage[]
+  liveProducts  String?      @default("[]")
+  ClassName     ClassName[]
+
+  @@index([projectId])
+}
+
+model ClassName {
+  id         String   @id @default(uuid())
+  name       String
+  color      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  websiteId   String
+  customData String?  
+  Website     Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+}
+
+model WebsitePage {
+  id           String   @id @default(uuid())
+  name         String
+  pathName     String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  visits       Int      @default(0)
+  content      String?  
+  order        Int
+  previewImage String?  
+  websiteId     String
+  Website       Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+}
+
+model AgencySidebarOption {
+  id        String   @id @default(uuid())
+  name      String   @default("Menu")
+  link      String   @default("#")
+  icon      Icon     @default(info)
+  agencyId  String
+  order Int
+  Agency    Agency?  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+}
+
+model ProjectSidebarOption {
+  id           String      @id @default(uuid())
+  name         String      @default("Menu")
+  link         String      @default("#")
+  icon         Icon        @default(info)
+  order Int
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  Project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String?
+
+  @@index([projectId])
+}
+
+enum InvitationStatus {
+  ACCEPTED
+  REVOKED
+  PENDING
+}
+
+model Invitation {
+  id       String           @id @default(uuid())
+  email    String           @unique
+  agencyId String
+  Agency   Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  status   InvitationStatus @default(PENDING)
+  role     Role             @default(PROJECT_USER)
+
+  @@index([agencyId])
+}
+
+model Notification {
+  id           String  @id @default(uuid())
+  notification String
+  agencyId     String
+  projectId String?
+  userId       String
+
+  User       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Agency     Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  Project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+enum Plan {
+  price_1RG0PDEmUyEyTdquMWX67IPU
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  plan      Plan?
+  price     String?
+  active    Boolean  @default(false)
+
+  priceId              String
+  customerId           String
+  currentPeriodEndDate DateTime
+  subscritiptionId     String   @unique
+
+  agencyId String? @unique
+  Agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  @@index([customerId])
+}
+
+model AddOns {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  active    Boolean  @default(false)
+  priceId   String   @unique
+  agencyId  String?
+  Agency    Agency?  @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
+}

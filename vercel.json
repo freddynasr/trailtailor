@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/stripe/subscription-renew",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}
